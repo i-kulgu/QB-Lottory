@@ -6,7 +6,7 @@ AddEventHandler('onResourceStart', function(resourceName)
     end
     local t = os.date("*t") -- Gets server date and time
     print('Time Test'..t.wday..' DAY @'..t.hour..' hour')
-    --UpdatePayout(0)
+    UpdatePayout(0)
     
   end)
 
@@ -21,7 +21,7 @@ function RegisterTicket(source, item)
     local player = QBCore.Functions.GetPlayer(source)
     local playerID = player.PlayerData.citizenid
 --    local ticket = item
-    print("lotto system ", player.PlayerData.citizenid)
+    print("lotto system: " .. player.PlayerData.citizenid .. " has submitted a ticket!")
 
     if playerID ~= nil then
         MySQL.Async.insert("INSERT INTO lotterytickets (citizenid) VALUES (@citizen) ", {
@@ -29,7 +29,9 @@ function RegisterTicket(source, item)
         })
         player.Functions.RemoveItem('lotto', 1)
         TriggerClientEvent('QBCore:Notify', player, 'You are Now entered to win!', 'success')
-        UpdatePayout(Config.TicketValue)
+        if Config.AlwaysNotify then
+        UpdatePayout(Config.TicketValue)    
+        end
     end
 
 
@@ -138,8 +140,6 @@ while true do
     if t.day == Config.DrawDay and t.hour == Config.DrawTime and t.min == 00 then
         print("Choosing winner.... Drum Roll!")
         ChooseWinner()
-    else
-
     end
 end
 end)
