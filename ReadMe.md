@@ -31,7 +31,7 @@ Config.DrawDay = 6 -- weekday the draw will be done, 1=sunday, 2 monday, 3 tuesd
 Config.DrawTime = 19 --The hour it will be drawn at, 24HR Clock
 Config.AlwaysNotify = false -- Should the server post new pot every ticket submission? if false, itll only post on server restart
 
---[[ To Do
+--[[
 
 Add the lotto.png to 
 QB-Inventory/html/images
