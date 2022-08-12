@@ -5,9 +5,9 @@ AddEventHandler('onResourceStart', function(resourceName)
       return
     end
     local t = os.date("*t") -- Gets server date and time
-    print('Time Test'..t.wday..' DAY @'..t.hour..' hour')
+    if Config.Debug then print('Time Test'..t.wday..' DAY @'..t.hour..' hour') end
     UpdatePayout(0)
-    
+
   end)
 
 
@@ -21,57 +21,53 @@ function RegisterTicket(source, item)
     local player = QBCore.Functions.GetPlayer(source)
     local playerID = player.PlayerData.citizenid
 --    local ticket = item
-    print("lotto system: " .. player.PlayerData.citizenid .. " has submitted a ticket!")
+    if Config.Debug then print("lotto system: " .. player.PlayerData.citizenid .. " has submitted a ticket!") end
 
     if playerID ~= nil then
         MySQL.Async.insert("INSERT INTO lotterytickets (citizenid) VALUES (@citizen) ", {
             ["@citizen"] = playerID
         })
         player.Functions.RemoveItem('lotto', 1)
-        TriggerClientEvent('QBCore:Notify', player, 'You are Now entered to win!', 'success')
+        TriggerClientEvent('QBCore:Notify', player, Lang:t("lottory.entered"), 'success')
         if Config.AlwaysNotify then
-        UpdatePayout(Config.TicketValue)    
+            UpdatePayout(Config.TicketValue)
         end
     end
-
-
 end
 
 function UpdatePayout(value)
-        MySQL.Async.fetchAll("SELECT * FROM lotteryserver ORDER BY id DESC LIMIT 1", {}, function(result)
-            local oldpayout = result[1].Payout
-            local newPayout = oldpayout+value
-            print ("payout:", newPayout)
+    MySQL.Async.fetchAll("SELECT * FROM lotteryserver ORDER BY id DESC LIMIT 1", {}, function(result)
+    local oldpayout = result[1].Payout
+    local newPayout = oldpayout+value
+    if Config.Debug then print ("payout:", newPayout) end
 
-            MySQL.Async.execute("UPDATE lotteryserver SET Payout = ? WHERE id = 1", {
-                newPayout
-            })
-            PostToDiscord(newPayout)
-            
-            end) 
+    MySQL.Async.execute("UPDATE lotteryserver SET Payout = ? WHERE id = 1", {
+        newPayout
+    })
+    PostToDiscord(newPayout)
+
+    end)
 end
 
 function ClearPayout()
     local value = 0
-        MySQL.Async.execute("UPDATE lotteryserver SET Payout = ? WHERE id = 1", {
-            value
-        })
-        ClearTickets()
-
+    MySQL.Async.execute("UPDATE lotteryserver SET Payout = ? WHERE id = 1", {
+        value
+    })
+    ClearTickets()
 end
-
 
 function PostToDiscord(PayoutValue)
     MySQL.Async.fetchAll("SELECT * FROM lotterytickets ORDER BY id DESC LIMIT 1", {}, function(result)
         local submissions = result[1].id
         local MaxPayout = PayoutValue*Config.Multiplier
-        local text = ("The Dead End Lottery Value today is $".. MaxPayout.." With "..submissions.." Tickets Submitted")
+        local text = (Lang:t("lottory.value", {payout = MaxPayout ,submission = submissions}))
         PerformHttpRequest(Config.Webhook, function(err, text, header) end, 'POST', json.encode({content = text}), {["Content-Type"] = 'application/json'})
-    
+
     end)
 end
 
-QBCore.Commands.Add('lotterydraw', 'Draw Lottery Winner Manually (Admin Only)', {}, false, function(source, args)
+QBCore.Commands.Add(Config.Command, Lang:t("lottory.command"), {}, false, function(source, args)
     TriggerEvent('Lottery:Server:Payout')
 end, 'god')
 
@@ -80,15 +76,13 @@ AddEventHandler("Lottery:Server:Payout", function(src)
     ChooseWinner()
 end)
 
-
 function ChooseWinner()
     MySQL.Async.fetchAll("SELECT * FROM lotterytickets ORDER BY id DESC LIMIT 1", {}, function(result)
     local totaltickets = result[1].id
     local winningticket = math.random(1, totaltickets)
         MySQL.Async.fetchSingle('SELECT citizenid FROM `lotterytickets` WHERE id = ?', {winningticket}, function(result)
-            --
                 local characterID = result.citizenid
-                print(characterID)
+                if Config.Debug then print(characterID) end
 
                 if characterID ~= nil then
                     MySQL.Async.fetchAll('SELECT * FROM players WHERE citizenid = ? ', {characterID}, function (result)
@@ -99,23 +93,16 @@ function ChooseWinner()
                         local Player = QBCore.Functions.GetPlayer(pData.PlayerData.id)
                             if Player == nil then
                                 MySQL.Async.fetchSingle("SELECT Payout FROM lotteryserver WHERE 1", {}, function(result)
-                                local text = ('The winner of the $'..lottopayout..' is! '..FirstName..' '..LastName..'')
-                                print(text)
+                                local text = (Lang:t("lottory.winner", {payout = lottopayout, firstname = FirstName, lastname = LastName}))
+                                if Config.Debug then print(text) end
                                 -- Player.Functions.AddMoney('bank', lottopayout)
                                -- ClearPayout()
                                -- PerformHttpRequest(Config.WinHook, function(err, text, header) end, 'POST', json.encode({content = text}), {["Content-Type"] = 'application/json'})
                                 end)
-
                             end
-                        print ('Player is NOT in the CITY')
+                        if Config.Debug then print ('Player is NOT in the CITY') end
                         Wait(10000)
                         ChooseWinner()
-                            
-                            
-                            
-                           
-                        
-                        
                         end
                     end)
                 end
@@ -129,16 +116,13 @@ function ClearTickets()
     MySQL.Async.execute("TRUNCATE lotterytickets")
 end
 
-
-
-
 -- Checks what time it is and waits patiently for the draw
 Citizen.CreateThread(function()
 while true do
-    Citizen.Wait(60000) -- Check every minute 
+    Citizen.Wait(60000) -- Check every minute
     local t = os.date("*t")
     if t.day == Config.DrawDay and t.hour == Config.DrawTime and t.min == 00 then
-        print("Choosing winner.... Drum Roll!")
+        if Config.Debug then print("Choosing winner.... Drum Roll!") end
         ChooseWinner()
     end
 end

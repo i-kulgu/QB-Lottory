@@ -4,6 +4,6 @@ AddEventHandler('onResourceStart', function(resourceName)
     if (GetCurrentResourceName() ~= resourceName) then
       return
     end
-    print('The resource ' .. resourceName .. ' has been started.')
+    if Config.Debug then print('The resource ' .. resourceName .. ' has been started.') end
   end)
 
